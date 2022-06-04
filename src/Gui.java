@@ -1,7 +1,5 @@
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.LinkedList;
@@ -9,14 +7,14 @@ import java.util.LinkedList;
 public class Gui implements ActionListener{
     private Catalog catalog;
     private JFrame jFrame;
-    private JButton loginButton, searchBookButton, myBooksButton, reserveBookButton, addBookButton, deleteBookButton, lendUserBookButton, getBookFromUserButton, searchTitleButton, addButton;
+    private JButton loginButton, searchBookButton, myBooksButton, reserveBookButton, addBookButton, deleteBookButton, lendUserBookButton, getBookFromUserButton, searchTitleButton, addButton, reserveButton, lendButton, backLoginButton, backAdminMenuButton, backUserMenuButton, backSearchMenuButton;
     private JTextField loginTextField, passwordTextField, searchTitleTextField, addAuthorTextField, addTitleTextField, addISBNTextField;
     private JLabel loginLabel, passwordLabel, addAuthorLabel, addTitleLabel, addISBNLabel;
     private JTable jTable;
     private JScrollPane scrollPanel;
     private JPanel contentPanel;
     private LinkedList<Account> accounts;
-    private Account account;
+    private LinkedList<Copy> copies;
     private User user;
     private Admin admin;
     Gui(){
@@ -73,6 +71,13 @@ public class Gui implements ActionListener{
             catalog.getListOfAllBooks().get(i).addCopy();
             catalog.getListOfAllBooks().get(i).addCopy();
         }
+        copies=new LinkedList<>();
+        for(int i=0;i<catalog.getListOfAllBooks().size();i++){
+            Book temp=catalog.getListOfAllBooks().get(i);
+            for(int j=0;j<temp.getListOfAllCopies().size();j++){
+                copies.add(temp.getListOfAllCopies().get(j));
+            }
+        }
     }
 
     @Override
@@ -82,10 +87,12 @@ public class Gui implements ActionListener{
                 if(loginTextField.getText().equals(accounts.get(i).getLogin()) && passwordTextField.getText().equals(accounts.get(i).getPassword()) && accounts.get(i).getAccountType()==AccountType.ADMIN){
                     adminMenu();
                     admin= (Admin) accounts.get(i);
+                    user=null;
                 }
                 else if(loginTextField.getText().equals(accounts.get(i).getLogin()) && passwordTextField.getText().equals(accounts.get(i).getPassword()) && accounts.get(i).getAccountType()==AccountType.USER){
                     userMenu();
                     user= (User) accounts.get(i);
+                    admin=null;
                 }
             }
         }
@@ -105,7 +112,7 @@ public class Gui implements ActionListener{
 
         }
         else if(e.getSource()==lendUserBookButton){
-
+            lendUserBookMenu();
         }
         else if(e.getSource()==getBookFromUserButton){
 
@@ -117,6 +124,15 @@ public class Gui implements ActionListener{
             catalog.getListOfAllBooks().add(new Book(addTitleTextField.getText(),Integer.parseInt(addISBNTextField.getText()),new Author(addAuthorTextField.getText())));
             catalog.getListOfAllBooks().get(catalog.getListOfAllBooks().size()-1).addCopy();
             displayBooks();
+        }
+        else if(e.getSource()==reserveButton){
+            reserveBook();
+        }
+        else if(e.getSource()==lendButton){
+            lendBook();
+        }
+        else if(e.getSource()==backAdminMenuButton){
+            adminMenu();
         }
     }
     public void userMenu(){
@@ -176,24 +192,16 @@ public class Gui implements ActionListener{
     }
 
     public void displayBooks(){
-        int size = Book.getNumberOfAllCopies();
-        Object[][] rows = new Object[size][];
+        Object[][] rows = new Object[copies.size()][];
         Object[] row;
-        Book temp;
-        int rowsIndex = 0;
-        for(int i = 0; i < catalog.getListOfAllBooks().size(); i++){
-            temp = catalog.getListOfAllBooks().get(i);
-            for(int j = 0; j < temp.getListOfAllCopies().size(); j++){
-                row = new Object[5];
-                row[0] = temp.getAuthor().getName();
-                row[1] = temp.getTitle();
-                row[2] = temp.getIsbn();
-                row[3] = temp.getListOfAllCopies().get(j).getId();
-                row[4] = temp.getListOfAllCopies().get(j).getStatus();
-                rows[rowsIndex] = row;
-                rowsIndex++;
-            }
-
+        for(int i=0;i<copies.size();i++){
+            row = new Object[5];
+            row[0] = copies.get(i).getAuthor().getName();
+            row[1] = copies.get(i).getTitle();
+            row[2] = copies.get(i).getIsbn();
+            row[3] = copies.get(i).getId();
+            row[4] = copies.get(i).getStatus();
+            rows[i] = row;
         }
         String[] column= {"Author","Title","ISBN", "ID", "Status"};
         setJTable(rows,column);
@@ -217,19 +225,15 @@ public class Gui implements ActionListener{
     public void searchTitleMenu(){
         LinkedList<Object[]> rowsList=new LinkedList<>();
         Object[] row;
-        Book temp;
-        for(int i = 0; i < catalog.getListOfAllBooks().size(); i++){
-            temp = catalog.getListOfAllBooks().get(i);
-            for(int j = 0; j < temp.getListOfAllCopies().size(); j++){
-                if(temp.getTitle().equalsIgnoreCase(searchTitleTextField.getText())) {
-                    row = new Object[5];
-                    row[0] = temp.getAuthor().getName();
-                    row[1] = temp.getTitle();
-                    row[2] = temp.getIsbn();
-                    row[3] = temp.getListOfAllCopies().get(j).getId();
-                    row[4] = temp.getListOfAllCopies().get(j).getStatus();
-                    rowsList.add(row);
-                }
+        for(int i=0;i<copies.size();i++){
+            if(copies.get(i).getTitle().equalsIgnoreCase(searchTitleTextField.getText())) {
+                row = new Object[5];
+                row[0] = copies.get(i).getAuthor().getName();
+                row[1] = copies.get(i).getTitle();
+                row[2] = copies.get(i).getIsbn();
+                row[3] = copies.get(i).getId();
+                row[4] = copies.get(i).getStatus();
+                rowsList.add(row);
             }
         }
         Object[][] rowsArray = new Object[rowsList.size()][];
@@ -245,7 +249,7 @@ public class Gui implements ActionListener{
         jFrame.dispose();
         jFrame.removeAll();
         jFrame=new JFrame("display books");
-        jFrame.setSize(700,250);
+        jFrame.setSize(700,300);
         jFrame.setLocationRelativeTo(null);
         jFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         contentPanel = new JPanel();
@@ -265,20 +269,24 @@ public class Gui implements ActionListener{
         displayBooks();
         jFrame.resize(700,300);
         addAuthorLabel=new JLabel("Author:");
-        addAuthorLabel.setBounds(30,200,70,30);
+        addAuthorLabel.setBounds(20,200,70,30);
         addTitleLabel=new JLabel("Title:");
-        addTitleLabel.setBounds(200,200,70,30);
+        addTitleLabel.setBounds(190,200,70,30);
         addISBNLabel=new JLabel("ISBN:");
-        addISBNLabel.setBounds(350,200,70,30);
+        addISBNLabel.setBounds(340,200,70,30);
         addAuthorTextField=new JTextField();
-        addAuthorTextField.setBounds(80,200,100,30);
+        addAuthorTextField.setBounds(70,200,100,30);
         addTitleTextField=new JTextField();
-        addTitleTextField.setBounds(235,200,100,30);
+        addTitleTextField.setBounds(225,200,100,30);
         addISBNTextField=new JTextField();
-        addISBNTextField.setBounds(390,200,100,30);
+        addISBNTextField.setBounds(380,200,100,30);
         addButton=new JButton("add");
-        addButton.setBounds(520,200,80,30);
+        addButton.setBounds(495,200,80,30);
         addButton.addActionListener(this);
+        backAdminMenuButton=new JButton("back");
+        backAdminMenuButton.setBounds(590,200,80,30);
+        backAdminMenuButton.addActionListener(this);
+        jFrame.add(backAdminMenuButton);
         jFrame.add(addAuthorLabel);
         jFrame.add(addTitleLabel);
         jFrame.add(addISBNLabel);
@@ -289,12 +297,46 @@ public class Gui implements ActionListener{
     }
     public void reserveBookMenu(){
         displayBooks();
-        jTable.getSelectionModel().addListSelectionListener(new ListSelectionListener(){
-            public void valueChanged(ListSelectionEvent event) {
-                //Copy copy=catalog.getListOfAllBooks().get((jTable.getSelectedRow()));
-                //user.addBookToReserveMyBooks(jTable.getSelectedRow());
-                System.out.println(jTable.getValueAt(jTable.getSelectedRow(), 3).toString());
+        jFrame.resize(700,300);
+        reserveButton=new JButton("reserve");
+        reserveButton.setBounds(30,200,80,30);
+        reserveButton.addActionListener(this);
+        jFrame.add(reserveButton);
+    }
+    public void reserveBook(){
+        if(user.getReserveMyBooks().size()<3) {
+            Copy copy = copies.get(jTable.getSelectedRow());
+            if(copy.getStatus()==CopyStatus.AVAILABLE) {
+                copy.setStatus(CopyStatus.RESERVED);
+                user.addBookToReserveMyBooks(copy);
+                reserveBookMenu();
             }
-        });
+        }
+    }
+    public void lendUserBookMenu(){
+        displayBooks();
+        jFrame.resize(700,300);
+        lendButton=new JButton("lend");
+        lendButton.setBounds(30,200,80,30);
+        lendButton.addActionListener(this);
+        backAdminMenuButton=new JButton("back");
+        backAdminMenuButton.setBounds(550,200,80,30);
+        backAdminMenuButton.addActionListener(this);
+        jFrame.add(backAdminMenuButton);
+        jFrame.add(lendButton);
+    }
+    public void lendBook(){
+        for(int i=0;i<accounts.size();i++){
+            if(accounts.get(i).getAccountType()==AccountType.USER){
+                user= (User) accounts.get(i);
+                Copy copy = copies.get(jTable.getSelectedRow());
+                if(user.getReserveMyBooks().contains(copy) && user.getMyBooks().size()<3){
+                    user.getReserveMyBooks().remove(copy);
+                    user.getMyBooks().add(copy);
+                    copy.setStatus(CopyStatus.LOANED);
+                    lendUserBookMenu();
+                }
+            }
+        }
     }
 }

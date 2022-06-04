@@ -28,9 +28,8 @@ public class Book {
 
     public void addCopy() {
         numberOfAllCopies++;
-        listOfAllCopies.add(new Copy(numberOfAllCopies, CopyStatus.AVAILABLE));
+        listOfAllCopies.add(new Copy(author, title, isbn, numberOfAllCopies, CopyStatus.AVAILABLE));
     }
-
     public Author getAuthor() {
         return author;
     }
